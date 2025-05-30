@@ -1,0 +1,15 @@
+artifact_uri: file:///C:/Users/hp/Desktop/Pneumothorax_mlops/src/mlruns/689270567002371979/3fa5dd57c5ad4dedaf01e23ba963e83f/artifacts
+end_time: 1744669212521
+entry_point_name: ''
+experiment_id: '689270567002371979'
+lifecycle_stage: active
+run_id: 3fa5dd57c5ad4dedaf01e23ba963e83f
+run_name: Xception_Feature_Extraction
+run_uuid: 3fa5dd57c5ad4dedaf01e23ba963e83f
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1744667618421
+status: 3
+tags: []
+user_id: hp

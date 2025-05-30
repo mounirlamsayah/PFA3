@@ -1,0 +1,15 @@
+artifact_uri: file:///C:/Users/hp/Desktop/Pneumothorax_mlops/src/mlruns/954881008345920317/1f90de1454674def9e19ef0437167629/artifacts
+end_time: 1744666838114
+entry_point_name: ''
+experiment_id: '954881008345920317'
+lifecycle_stage: active
+run_id: 1f90de1454674def9e19ef0437167629
+run_name: Préparation Dataset
+run_uuid: 1f90de1454674def9e19ef0437167629
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1744666838017
+status: 4
+tags: []
+user_id: hp

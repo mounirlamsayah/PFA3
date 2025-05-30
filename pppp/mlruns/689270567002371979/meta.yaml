@@ -1,0 +1,6 @@
+artifact_location: file:///C:/Users/hp/Desktop/Pneumothorax_mlops/src/mlruns/689270567002371979
+creation_time: 1744667618389
+experiment_id: '689270567002371979'
+last_update_time: 1744667618389
+lifecycle_stage: active
+name: Extraction de features - Xception

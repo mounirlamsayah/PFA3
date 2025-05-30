@@ -1,0 +1,15 @@
+artifact_uri: file:///C:/Users/hp/Desktop/Pneumothorax_mlops/src/mlruns/850190311692747400/a08febbdc5a34922a129dc5689f18667/artifacts
+end_time: 1744670692517
+entry_point_name: ''
+experiment_id: '850190311692747400'
+lifecycle_stage: active
+run_id: a08febbdc5a34922a129dc5689f18667
+run_name: Train Classifieur Dense
+run_uuid: a08febbdc5a34922a129dc5689f18667
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1744670632536
+status: 3
+tags: []
+user_id: hp

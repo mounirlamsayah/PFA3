@@ -1,0 +1,15 @@
+artifact_uri: file:///C:/Users/hp/Desktop/Pneumothorax_mlops/src/mlruns/430466556451179676/323ec0254ce049f79270fbbe8f848e41/artifacts
+end_time: 1744673059794
+entry_point_name: ''
+experiment_id: '430466556451179676'
+lifecycle_stage: active
+run_id: 323ec0254ce049f79270fbbe8f848e41
+run_name: evaluation du modele
+run_uuid: 323ec0254ce049f79270fbbe8f848e41
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1744673053126
+status: 3
+tags: []
+user_id: hp

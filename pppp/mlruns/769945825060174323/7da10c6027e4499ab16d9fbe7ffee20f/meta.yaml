@@ -1,0 +1,15 @@
+artifact_uri: file:///C:/Users/hp/Desktop/Pneumothorax_mlops/src/mlruns/769945825060174323/7da10c6027e4499ab16d9fbe7ffee20f/artifacts
+end_time: 1744670515302
+entry_point_name: ''
+experiment_id: '769945825060174323'
+lifecycle_stage: active
+run_id: 7da10c6027e4499ab16d9fbe7ffee20f
+run_name: Test Classifieur
+run_uuid: 7da10c6027e4499ab16d9fbe7ffee20f
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1744670476208
+status: 3
+tags: []
+user_id: hp

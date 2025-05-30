@@ -1,0 +1,6 @@
+artifact_location: file:///C:/Users/hp/Desktop/Pneumothorax_mlops/src/mlruns/850190311692747400
+creation_time: 1744669449736
+experiment_id: '850190311692747400'
+last_update_time: 1744669449736
+lifecycle_stage: active
+name: Entraînement Classifieur - Features Xception
