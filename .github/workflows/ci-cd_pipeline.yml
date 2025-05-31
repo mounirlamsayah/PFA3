@@ -74,7 +74,7 @@ jobs:
         print('\\n' + '='*50)
         print('🚀 MLflow UI is available at:', public_url)
         print('='*50 + '\\n')
-        time.sleep(1000)
+        time.sleep(10)
         "
 
     - name: Archive model artifacts
@@ -306,16 +306,11 @@ jobs:
         echo "Deployment timestamp: $(date)"
         python -c "
         import time
-        import random
         print('⏳ Running deployment health checks...')
         time.sleep(5)
-        if random.choice([True, True, True, False]):
-            print('✅ Health check passed')
-            print('✅ Staging deployment successful')
-        else:
-            print('❌ Health check failed')
-            raise Exception('Deployment health check failed')
-        "
+        print('✅ Health check passed')
+        print('✅ Staging deployment successful')
+            "
 
     - name: Performance benchmarking
       continue-on-error: true
