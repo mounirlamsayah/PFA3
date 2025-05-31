@@ -1,3 +1,5 @@
+# ci_pipeline.yml
+
 name: ML Pipeline
 
 on:
@@ -12,39 +14,35 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Set up Python 3.10.13
       uses: actions/setup-python@v4
       with:
         python-version: '3.10.13'
     
-    - name: install requirements
+    - name: Install requirements
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
   
-    - name: run data loader
+    - name: Run data loader
       run: |
         python data_loader.py
         
-    - name: data preprocessing
+    - name: Data preprocessing
       run: |
         python preprocessing.py
         
-
-    - name: feature extraction
+    - name: Feature extraction
       run: |
         python feature_extraction.py
         
-
-    - name: train model
+    - name: Train model
       run: python train_model.py
 
-    - name: evaluate model
-        
+    - name: Evaluate model
       run: python evaluate_model.py
-
 
     - name: Set up Ngrok and Run MLflow UI
       env:
@@ -67,7 +65,7 @@ jobs:
             '--port', '5000'
         ])
         time.sleep(10)
-        print('premier sleep terminé')
+        print('Premier sleep terminé')
         public_url = ngrok.connect(5000)
         print('\\n' + '='*50)
         print('🚀 MLflow UI is available at:', public_url)
@@ -75,32 +73,50 @@ jobs:
         time.sleep(1000)
         "
 
-    - name: Archive artifacts
+    # Correction des patterns de fichiers dans les artefacts
+    - name: Archive model artifacts
       uses: actions/upload-artifact@v4
       with:
         name: model-artifacts
         path: |
-          outputs/trained_model.h5
-          outputs/features/*.pkl
-          *.txt
-          *.png
-          *.csv
-
+          **/*.txt
+          **/*.png
+          **/*.csv
+          **/*.keras
+          **/*.h5
+          **/*.pkl
+          **/*.joblib
+        retention-days: 30
 
     - name: Upload MLflow logs
       uses: actions/upload-artifact@v4
       with:
         name: mlruns
         path: mlruns/
+        retention-days: 30
 
     - name: Upload Data directory
       uses: actions/upload-artifact@v4
       with:
         name: data
         path: data/
+        retention-days: 30
 
     - name: Upload Outputs directory
       uses: actions/upload-artifact@v4
       with:
         name: outputs
         path: outputs/
+        retention-days: 30
+
+    # Ajout d'une vérification des artefacts créés
+    - name: Verify artifacts existence
+      run: |
+        echo "=== Checking for model artifacts ==="
+        find . -name "*.txt" -o -name "*.png" -o -name "*.csv" -o -name "*.keras" -o -name "*.h5" -o -name "*.pkl" -o -name "*.joblib" | head -20
+        echo "=== Checking outputs directory ==="
+        ls -la outputs/ || echo "Outputs directory not found"
+        echo "=== Checking mlruns directory ==="
+        ls -la mlruns/ || echo "MLruns directory not found"
+        echo "=== Checking data directory ==="
+        ls -la data/ || echo "Data directory not found"
