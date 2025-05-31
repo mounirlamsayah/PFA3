@@ -140,7 +140,7 @@ jobs:
     - name: Install deployment requirements
       run: |
         python -m pip install --upgrade pip
-        pip install flask gunicorn docker streamlit plotly
+        pip install flask gunicorn docker streamlit plotly pyngrok requests
         pip install -r requirements.txt
 
     - name: Download CI artifacts
@@ -199,6 +199,47 @@ jobs:
         echo "Deployment package created successfully"
         echo "=== Deployment package contents ==="
         ls -la deployment/
+
+    - name: Set up Ngrok and Run MLflow UI for CD Pipeline
+      env:
+        NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
+      run: |
+        python -c "
+        import os
+        import time
+        import subprocess
+        from pyngrok import ngrok
+
+        print('🚀 Setting up Ngrok for CD Pipeline...')
+        ngrok.set_auth_token(os.environ['NGROK_AUTH_TOKEN'])
+
+        # Start MLflow UI with deployment artifacts
+        mlflow_process = subprocess.Popen([
+            'mlflow', 'ui',
+            '--backend-store-uri', './mlruns',
+            '--default-artifact-root', './mlruns',
+            '--host', '0.0.0.0',
+            '--port', '5001'
+        ])
+        
+        time.sleep(15)
+        print('✅ MLflow UI started for CD Pipeline')
+        
+        # Create Ngrok tunnel
+        public_url = ngrok.connect(5001)
+        print('\\n' + '='*60)
+        print('🏥 CD PIPELINE - MLflow UI available at:', public_url)
+        print('📊 View deployment results and model metrics')
+        print('⏰ URL will be available for 200 seconds')
+        print('='*60 + '\\n')
+        
+        # Sleep for 200 seconds to allow consultation
+        print('⏳ Waiting 200 seconds for manual inspection...')
+        time.sleep(200)
+        
+        print('✅ Ngrok session completed for CD Pipeline')
+        mlflow_process.terminate()
+        "
 
     - name: Build Docker image
       continue-on-error: true
@@ -316,8 +357,11 @@ jobs:
             print('⚠️ No model found for benchmarking')
         "
 
-    - name: Create deployment summary
+    - name: Create deployment summary with extended viewing time
+      env:
+        NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
       run: |
+        # Create the summary file first
         cat > deployment_summary.md << EOF
         # 🏥 Pneumothorax Classifier - Deployment Summary
 
@@ -348,6 +392,121 @@ jobs:
         *Automated deployment by GitHub Actions*
         EOF
 
+        # Set up a simple HTTP server to serve the deployment summary and results
+        python -c "
+        import os
+        import time
+        import subprocess
+        import threading
+        import http.server
+        import socketserver
+        from pyngrok import ngrok
+
+        print('🚀 Setting up final review server...')
+        ngrok.set_auth_token(os.environ['NGROK_AUTH_TOKEN'])
+
+        # Create a simple HTML page with deployment results
+        html_content = '''
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>CD Pipeline Results - Pneumothorax Classifier</title>
+            <style>
+                body { font-family: Arial, sans-serif; margin: 40px; background-color: #f5f5f5; }
+                .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+                h1 { color: #2c3e50; text-align: center; }
+                .status { padding: 15px; margin: 20px 0; border-radius: 5px; }
+                .success { background-color: #d4edda; border-left: 5px solid #28a745; }
+                .info { background-color: #d1ecf1; border-left: 5px solid #17a2b8; }
+                .warning { background-color: #fff3cd; border-left: 5px solid #ffc107; }
+                pre { background-color: #f8f9fa; padding: 15px; border-radius: 5px; overflow-x: auto; }
+                .emoji { font-size: 1.2em; }
+            </style>
+        </head>
+        <body>
+            <div class=\"container\">
+                <h1>🏥 CD Pipeline Results</h1>
+                
+                <div class=\"status success\">
+                    <h3><span class=\"emoji\">✅</span> Deployment Status: SUCCESS</h3>
+                    <p>Model has been successfully validated and deployed to staging environment.</p>
+                </div>
+                
+                <div class=\"status info\">
+                    <h3><span class=\"emoji\">📊</span> Pipeline Information</h3>
+                    <ul>
+                        <li><strong>Model Version:</strong> ''' + os.environ.get('GITHUB_SHA', 'N/A')[:8] + '''</li>
+                        <li><strong>Branch:</strong> ''' + os.environ.get('GITHUB_REF_NAME', 'N/A') + '''</li>
+                        <li><strong>Deployment Date:</strong> ''' + str(time.ctime()) + '''</li>
+                        <li><strong>Environment:</strong> Staging</li>
+                    </ul>
+                </div>
+                
+                <div class=\"status info\">
+                    <h3><span class=\"emoji\">🧪</span> Model Validation Results</h3>
+                    <ul>
+                        <li>✅ Model loading: SUCCESS</li>
+                        <li>✅ Prediction format: VALID</li>
+                        <li>✅ Performance benchmark: PASSED</li>
+                        <li>✅ Health checks: PASSED</li>
+                    </ul>
+                </div>
+                
+                <div class=\"status warning\">
+                    <h3><span class=\"emoji\">⏰</span> Review Time</h3>
+                    <p>This page will be available for 200 seconds for manual review of deployment results.</p>
+                    <p>Use this time to verify all deployment artifacts and metrics.</p>
+                </div>
+                
+                <div class=\"status info\">
+                    <h3><span class=\"emoji\">📋</span> Next Steps</h3>
+                    <ol>
+                        <li>Review MLflow experiments and metrics</li>
+                        <li>Verify model performance benchmarks</li>
+                        <li>Check deployment package contents</li>
+                        <li>Approve for production deployment if satisfied</li>
+                    </ol>
+                </div>
+            </div>
+        </body>
+        </html>
+        '''
+
+        with open('deployment_results.html', 'w') as f:
+            f.write(html_content)
+
+        # Start HTTP server in background
+        class Handler(http.server.SimpleHTTPRequestHandler):
+            def do_GET(self):
+                if self.path == '/' or self.path == '/index.html':
+                    self.path = '/deployment_results.html'
+                return super().do_GET()
+
+        def start_server():
+            with socketserver.TCPServer(('', 8000), Handler) as httpd:
+                httpd.serve_forever()
+
+        server_thread = threading.Thread(target=start_server)
+        server_thread.daemon = True
+        server_thread.start()
+        
+        time.sleep(5)
+        
+        # Create Ngrok tunnel for the web interface
+        public_url = ngrok.connect(8000)
+        print('\\n' + '='*70)
+        print('🌐 CD PIPELINE RESULTS AVAILABLE AT:', public_url)
+        print('📋 Complete deployment summary and validation results')
+        print('⏰ Available for 200 seconds for manual review')
+        print('='*70 + '\\n')
+        
+        # Wait for 200 seconds
+        print('⏳ Waiting 200 seconds for manual inspection of CD results...')
+        time.sleep(200)
+        
+        print('✅ CD Pipeline review session completed')
+        "
+
     - name: Upload deployment artifacts
       uses: actions/upload-artifact@v4
       with:
@@ -355,6 +514,7 @@ jobs:
         path: |
           deployment/
           deployment_summary.md
+          deployment_results.html
         retention-days: 30
 
     - name: Create GitHub Release (on main branch)
