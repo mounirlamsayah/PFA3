@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 
 # Configuration
-MODEL_PATH = os.environ.get('MODEL_PATH', './outputs/trained_model.h5')
+MODEL_PATH = os.environ.get('MODEL_PATH', '../outputs/trained_model.h5')
 IMG_SIZE = (299, 299, 3)
 
 # Variables globales pour les modèles

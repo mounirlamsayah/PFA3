@@ -8,6 +8,9 @@ on:
     branches:
       - main
 
+permissions:
+  contents: write
+
 jobs:
   ci_pipeline:
     name: CI - ML Pipeline
