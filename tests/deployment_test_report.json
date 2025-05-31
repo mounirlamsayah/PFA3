@@ -1,0 +1,92 @@
+{
+  "test_summary": {
+    "total_tests": 10,
+    "passed_tests": 0,
+    "failed_tests": 10,
+    "timestamp": "2025-05-31T22:41:05.691112"
+  },
+  "detailed_results": [
+    {
+      "test_name": "Service Availability",
+      "success": false,
+      "message": "Connection failed: HTTPConnectionPool(host='localhost', port=5000): Max retries exceeded with url: / (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x0000029BBEB82B30>: Failed to establish a new connection: [WinError 10061] Aucune connexion n\u2019a pu \u00eatre \u00e9tablie car l\u2019ordinateur cible l\u2019a express\u00e9ment refus\u00e9e'))",
+      "timestamp": "2025-05-31T22:39:51.136025",
+      "details": {}
+    },
+    {
+      "test_name": "Health Endpoint",
+      "success": false,
+      "message": "Request failed: HTTPConnectionPool(host='localhost', port=5000): Max retries exceeded with url: /health (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x0000029BBEB83AC0>: Failed to establish a new connection: [WinError 10061] Aucune connexion n\u2019a pu \u00eatre \u00e9tablie car l\u2019ordinateur cible l\u2019a express\u00e9ment refus\u00e9e'))",
+      "timestamp": "2025-05-31T22:39:55.203128",
+      "details": {}
+    },
+    {
+      "test_name": "Model Info Endpoint",
+      "success": false,
+      "message": "Request failed: HTTPConnectionPool(host='localhost', port=5000): Max retries exceeded with url: /model/info (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x0000029BBEBDC460>: Failed to establish a new connection: [WinError 10061] Aucune connexion n\u2019a pu \u00eatre \u00e9tablie car l\u2019ordinateur cible l\u2019a express\u00e9ment refus\u00e9e'))",
+      "timestamp": "2025-05-31T22:39:59.277571",
+      "details": {}
+    },
+    {
+      "test_name": "Prediction Endpoint",
+      "success": false,
+      "message": "Request failed: HTTPConnectionPool(host='localhost', port=5000): Max retries exceeded with url: /predict (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x0000029BBEC500A0>: Failed to establish a new connection: [WinError 10061] Aucune connexion n\u2019a pu \u00eatre \u00e9tablie car l\u2019ordinateur cible l\u2019a express\u00e9ment refus\u00e9e'))",
+      "timestamp": "2025-05-31T22:40:03.505179",
+      "details": {}
+    },
+    {
+      "test_name": "Prediction Validation",
+      "success": false,
+      "message": "Validation failed: HTTPConnectionPool(host='localhost', port=5000): Max retries exceeded with url: /predict (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x0000029BBEC50910>: Failed to establish a new connection: [WinError 10061] Aucune connexion n\u2019a pu \u00eatre \u00e9tablie car l\u2019ordinateur cible l\u2019a express\u00e9ment refus\u00e9e'))",
+      "timestamp": "2025-05-31T22:40:07.582969",
+      "details": {}
+    },
+    {
+      "test_name": "Error Handling",
+      "success": false,
+      "message": "0/3 error handling tests passed",
+      "timestamp": "2025-05-31T22:40:19.841639",
+      "details": {}
+    },
+    {
+      "test_name": "Performance Benchmark",
+      "success": false,
+      "message": "Benchmark failed: HTTPConnectionPool(host='localhost', port=5000): Max retries exceeded with url: /predict (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x0000029BBEC50700>: Failed to establish a new connection: [WinError 10061] Aucune connexion n\u2019a pu \u00eatre \u00e9tablie car l\u2019ordinateur cible l\u2019a express\u00e9ment refus\u00e9e'))",
+      "timestamp": "2025-05-31T22:40:23.914417",
+      "details": {}
+    },
+    {
+      "test_name": "Concurrent Requests",
+      "success": false,
+      "message": "0/5 successful in 4.10s",
+      "timestamp": "2025-05-31T22:40:28.018330",
+      "details": {
+        "concurrent_requests": 5,
+        "successful_requests": 0,
+        "total_time": 4.101915121078491,
+        "success_rate": 0.0
+      }
+    },
+    {
+      "test_name": "Stress Load Test",
+      "success": false,
+      "message": "RPS: 0.8, Success: 0.0%",
+      "timestamp": "2025-05-31T22:41:01.601536",
+      "details": {
+        "duration_seconds": 30,
+        "total_requests": 24,
+        "successful_requests": 0,
+        "success_rate": 0.0,
+        "avg_response_time": NaN,
+        "requests_per_second": 0.8
+      }
+    },
+    {
+      "test_name": "Memory Usage Monitoring",
+      "success": false,
+      "message": "Test failed: HTTPConnectionPool(host='localhost', port=5000): Max retries exceeded with url: /predict (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x0000029BBEC51750>: Failed to establish a new connection: [WinError 10061] Aucune connexion n\u2019a pu \u00eatre \u00e9tablie car l\u2019ordinateur cible l\u2019a express\u00e9ment refus\u00e9e'))",
+      "timestamp": "2025-05-31T22:41:05.689596",
+      "details": {}
+    }
+  ]
+}

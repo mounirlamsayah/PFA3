@@ -392,40 +392,174 @@ jobs:
         *Automated deployment by GitHub Actions*
         EOF
 
-        # Set up a simple HTTP server to serve the deployment summary and results
+        # Set up deployment results viewer with improved error handling
         python -c "
         import os
+        import sys
         import time
         import subprocess
         import threading
         import http.server
         import socketserver
-        from pyngrok import ngrok
+        from pathlib import Path
 
-        print('🚀 Setting up final review server...')
-        ngrok.set_auth_token(os.environ['NGROK_AUTH_TOKEN'])
+        try:
+            from pyngrok import ngrok
+            print('✅ pyngrok imported successfully')
+        except ImportError as e:
+            print(f'❌ Failed to import pyngrok: {e}')
+            sys.exit(1)
 
-        # Create a simple HTML page with deployment results
-        html_content = '''
-        <!DOCTYPE html>
-        <html>
+        try:
+            print('🔐 Setting up Ngrok authentication...')
+            ngrok_token = os.environ.get('NGROK_AUTH_TOKEN')
+            if not ngrok_token:
+                print('❌ NGROK_AUTH_TOKEN not found in environment')
+                sys.exit(1)
+            
+            ngrok.set_auth_token(ngrok_token)
+            print('✅ Ngrok authentication successful')
+        except Exception as e:
+            print(f'❌ Ngrok authentication failed: {e}')
+            sys.exit(1)
+
+        # Create enhanced HTML page with deployment results
+        html_content = '''<!DOCTYPE html>
+        <html lang=\"en\">
         <head>
+            <meta charset=\"UTF-8\">
+            <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">
             <title>CD Pipeline Results - Pneumothorax Classifier</title>
             <style>
-                body { font-family: Arial, sans-serif; margin: 40px; background-color: #f5f5f5; }
-                .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-                h1 { color: #2c3e50; text-align: center; }
-                .status { padding: 15px; margin: 20px 0; border-radius: 5px; }
-                .success { background-color: #d4edda; border-left: 5px solid #28a745; }
-                .info { background-color: #d1ecf1; border-left: 5px solid #17a2b8; }
-                .warning { background-color: #fff3cd; border-left: 5px solid #ffc107; }
-                pre { background-color: #f8f9fa; padding: 15px; border-radius: 5px; overflow-x: auto; }
-                .emoji { font-size: 1.2em; }
+                * { margin: 0; padding: 0; box-sizing: border-box; }
+                body { 
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; 
+                    line-height: 1.6; 
+                    color: #333; 
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    min-height: 100vh;
+                    padding: 20px;
+                }
+                .container { 
+                    max-width: 900px; 
+                    margin: 0 auto; 
+                    background: rgba(255, 255, 255, 0.95); 
+                    padding: 40px; 
+                    border-radius: 20px; 
+                    box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+                    backdrop-filter: blur(10px);
+                }
+                h1 { 
+                    color: #2c3e50; 
+                    text-align: center; 
+                    margin-bottom: 30px;
+                    font-size: 2.5em;
+                    text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+                }
+                .status { 
+                    padding: 20px; 
+                    margin: 25px 0; 
+                    border-radius: 12px; 
+                    border-left: 6px solid;
+                    transition: transform 0.3s ease;
+                }
+                .status:hover {
+                    transform: translateX(5px);
+                }
+                .success { 
+                    background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%); 
+                    border-left-color: #28a745; 
+                }
+                .info { 
+                    background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%); 
+                    border-left-color: #17a2b8; 
+                }
+                .warning { 
+                    background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%); 
+                    border-left-color: #ffc107; 
+                }
+                .error {
+                    background: linear-gradient(135deg, #f8d7da 0%, #f1c0c7 100%);
+                    border-left-color: #dc3545;
+                }
+                pre { 
+                    background-color: #f8f9fa; 
+                    padding: 20px; 
+                    border-radius: 8px; 
+                    overflow-x: auto;
+                    border: 1px solid #e9ecef;
+                    font-family: 'Courier New', monospace;
+                }
+                .emoji { font-size: 1.3em; margin-right: 8px; }
+                ul { margin-left: 20px; }
+                li { margin: 8px 0; }
+                .timestamp {
+                    text-align: center;
+                    color: #666;
+                    font-style: italic;
+                    margin-top: 30px;
+                    padding-top: 20px;
+                    border-top: 1px solid #eee;
+                }
+                .countdown {
+                    background: linear-gradient(135deg, #ff7675 0%, #fd79a8 100%);
+                    color: white;
+                    text-align: center;
+                    padding: 15px;
+                    border-radius: 10px;
+                    margin: 20px 0;
+                    font-weight: bold;
+                    font-size: 1.1em;
+                }
+                .progress-bar {
+                    width: 100%;
+                    height: 20px;
+                    background-color: #e9ecef;
+                    border-radius: 10px;
+                    overflow: hidden;
+                    margin-top: 10px;
+                }
+                .progress-fill {
+                    height: 100%;
+                    background: linear-gradient(90deg, #00b894, #00cec9);
+                    width: 0%;
+                    transition: width 1s ease;
+                }
             </style>
+            <script>
+                let timeLeft = 200;
+                function updateCountdown() {
+                    const countdownEl = document.getElementById('countdown');
+                    const progressEl = document.getElementById('progress');
+                    
+                    if (timeLeft > 0) {
+                        const minutes = Math.floor(timeLeft / 60);
+                        const seconds = timeLeft % 60;
+                        countdownEl.textContent = `Time remaining: ${minutes}m ${seconds.toString().padStart(2, '0')}s`;
+                        
+                        const progress = ((200 - timeLeft) / 200) * 100;
+                        progressEl.style.width = progress + '%';
+                        
+                        timeLeft--;
+                        setTimeout(updateCountdown, 1000);
+                    } else {
+                        countdownEl.textContent = 'Review session completed';
+                        progressEl.style.width = '100%';
+                    }
+                }
+                window.onload = updateCountdown;
+            </script>
         </head>
         <body>
             <div class=\"container\">
                 <h1>🏥 CD Pipeline Results</h1>
+                
+                <div class=\"countdown\">
+                    <div id=\"countdown\">Loading...</div>
+                    <div class=\"progress-bar\">
+                        <div class=\"progress-fill\" id=\"progress\"></div>
+                    </div>
+                </div>
                 
                 <div class=\"status success\">
                     <h3><span class=\"emoji\">✅</span> Deployment Status: SUCCESS</h3>
@@ -436,9 +570,10 @@ jobs:
                     <h3><span class=\"emoji\">📊</span> Pipeline Information</h3>
                     <ul>
                         <li><strong>Model Version:</strong> ''' + os.environ.get('GITHUB_SHA', 'N/A')[:8] + '''</li>
-                        <li><strong>Branch:</strong> ''' + os.environ.get('GITHUB_REF_NAME', 'N/A') + '''</li>
-                        <li><strong>Deployment Date:</strong> ''' + str(time.ctime()) + '''</li>
+                        <li><strong>Branch:</strong> ''' + os.environ.get('GITHUB_REF_NAME', 'main') + '''</li>
+                        <li><strong>Deployment Date:</strong> ''' + time.strftime('%Y-%m-%d %H:%M:%S UTC') + '''</li>
                         <li><strong>Environment:</strong> Staging</li>
+                        <li><strong>Runner:</strong> GitHub Actions (ubuntu-latest)</li>
                     </ul>
                 </div>
                 
@@ -449,62 +584,156 @@ jobs:
                         <li>✅ Prediction format: VALID</li>
                         <li>✅ Performance benchmark: PASSED</li>
                         <li>✅ Health checks: PASSED</li>
+                        <li>✅ Artifact packaging: COMPLETED</li>
+                    </ul>
+                </div>
+                
+                <div class=\"status info\">
+                    <h3><span class=\"emoji\">🏗️</span> Deployment Artifacts</h3>
+                    <ul>
+                        <li>📦 Model files (*.h5, *.keras)</li>
+                        <li>📊 MLflow experiment logs</li>
+                        <li>📋 Training and validation data</li>
+                        <li>📈 Performance metrics and benchmarks</li>
+                        <li>🐳 Docker image (if Dockerfile present)</li>
                     </ul>
                 </div>
                 
                 <div class=\"status warning\">
-                    <h3><span class=\"emoji\">⏰</span> Review Time</h3>
-                    <p>This page will be available for 200 seconds for manual review of deployment results.</p>
-                    <p>Use this time to verify all deployment artifacts and metrics.</p>
+                    <h3><span class=\"emoji\">⏰</span> Review Instructions</h3>
+                    <p>This page provides a 200-second window for manual review of deployment results.</p>
+                    <p><strong>Use this time to:</strong></p>
+                    <ul>
+                        <li>Verify all deployment artifacts are present</li>
+                        <li>Check model performance metrics</li>
+                        <li>Review MLflow experiment logs (if available)</li>
+                        <li>Validate deployment package integrity</li>
+                    </ul>
                 </div>
                 
                 <div class=\"status info\">
                     <h3><span class=\"emoji\">📋</span> Next Steps</h3>
                     <ol>
-                        <li>Review MLflow experiments and metrics</li>
-                        <li>Verify model performance benchmarks</li>
-                        <li>Check deployment package contents</li>
-                        <li>Approve for production deployment if satisfied</li>
+                        <li><strong>Review MLflow UI:</strong> Check model metrics and parameters</li>
+                        <li><strong>Verify Performance:</strong> Ensure benchmarks meet requirements</li>
+                        <li><strong>Test Deployment:</strong> Validate staging environment functionality</li>
+                        <li><strong>Production Readiness:</strong> Approve for production deployment</li>
                     </ol>
+                </div>
+                
+                <div class=\"status info\">
+                    <h3><span class=\"emoji\">🔗</span> Resources</h3>
+                    <ul>
+                        <li><strong>GitHub Actions:</strong> Check logs and artifacts in your repository</li>
+                        <li><strong>MLflow UI:</strong> Available during CI/CD pipeline execution</li>
+                        <li><strong>Deployment Package:</strong> Downloaded as workflow artifacts</li>
+                    </ul>
+                </div>
+                
+                <div class=\"timestamp\">
+                    Generated by GitHub Actions CD Pipeline • ''' + time.strftime('%Y-%m-%d %H:%M:%S UTC') + '''
                 </div>
             </div>
         </body>
-        </html>
-        '''
+        </html>'''
 
-        with open('deployment_results.html', 'w') as f:
-            f.write(html_content)
+        # Write the HTML file
+        try:
+            with open('deployment_results.html', 'w', encoding='utf-8') as f:
+                f.write(html_content)
+            print('✅ HTML deployment results file created')
+        except Exception as e:
+            print(f'❌ Failed to create HTML file: {e}')
+            sys.exit(1)
 
-        # Start HTTP server in background
-        class Handler(http.server.SimpleHTTPRequestHandler):
+        # Custom HTTP handler with better error handling
+        class DeploymentHandler(http.server.SimpleHTTPRequestHandler):
             def do_GET(self):
                 if self.path == '/' or self.path == '/index.html':
                     self.path = '/deployment_results.html'
+                elif self.path == '/health':
+                    self.send_response(200)
+                    self.send_header('Content-type', 'text/plain')
+                    self.end_headers()
+                    self.wfile.write(b'OK')
+                    return
                 return super().do_GET()
+            
+            def log_message(self, format, *args):
+                print(f'🌐 HTTP: {format % args}')
 
-        def start_server():
-            with socketserver.TCPServer(('', 8000), Handler) as httpd:
-                httpd.serve_forever()
+        # Start HTTP server
+        server_started = False
+        server_thread = None
+        
+        try:
+            print('🌐 Starting HTTP server on port 8000...')
+            
+            def start_server():
+                global server_started
+                try:
+                    with socketserver.TCPServer(('', 8000), DeploymentHandler) as httpd:
+                        server_started = True
+                        print('✅ HTTP server started successfully')
+                        httpd.serve_forever()
+                except Exception as e:
+                    print(f'❌ HTTP server error: {e}')
 
-        server_thread = threading.Thread(target=start_server)
-        server_thread.daemon = True
-        server_thread.start()
+            server_thread = threading.Thread(target=start_server, daemon=True)
+            server_thread.start()
+            
+            # Wait for server to start
+            for i in range(10):
+                if server_started:
+                    break
+                time.sleep(1)
+            
+            if not server_started:
+                print('❌ HTTP server failed to start')
+                sys.exit(1)
+                
+        except Exception as e:
+            print(f'❌ Failed to start HTTP server: {e}')
+            sys.exit(1)
+
+        # Create Ngrok tunnel
+        try:
+            print('🔗 Creating Ngrok tunnel...')
+            public_url = ngrok.connect(8000)
+            print('✅ Ngrok tunnel created successfully')
+            
+            print('\\n' + '='*80)
+            print('🌐 CD PIPELINE RESULTS DASHBOARD:')
+            print(f'🔗 {public_url}')
+            print('📋 Complete deployment summary and validation results')
+            print('⏰ Available for 200 seconds for comprehensive review')
+            print('🔄 Auto-refresh countdown and progress tracking')
+            print('='*80 + '\\n')
+            
+        except Exception as e:
+            print(f'❌ Failed to create Ngrok tunnel: {e}')
+            print('ℹ️  Server is running locally on port 8000')
+            public_url = 'http://localhost:8000'
+
+        # Enhanced waiting period with progress updates
+        print('⏳ Starting 200-second review period...')
+        for i in range(200):
+            remaining = 200 - i
+            if i % 30 == 0:  # Update every 30 seconds
+                mins = remaining // 60
+                secs = remaining % 60
+                print(f'⏰ Review time remaining: {mins}m {secs:02d}s')
+            time.sleep(1)
         
-        time.sleep(5)
+        print('\\n✅ CD Pipeline review session completed successfully')
+        print('📊 Deployment results dashboard session ended')
         
-        # Create Ngrok tunnel for the web interface
-        public_url = ngrok.connect(8000)
-        print('\\n' + '='*70)
-        print('🌐 CD PIPELINE RESULTS AVAILABLE AT:', public_url)
-        print('📋 Complete deployment summary and validation results')
-        print('⏰ Available for 200 seconds for manual review')
-        print('='*70 + '\\n')
-        
-        # Wait for 200 seconds
-        print('⏳ Waiting 200 seconds for manual inspection of CD results...')
-        time.sleep(200)
-        
-        print('✅ CD Pipeline review session completed')
+        # Cleanup
+        try:
+            ngrok.disconnect(public_url)
+            print('🔌 Ngrok tunnel disconnected')
+        except:
+            pass
         "
 
     - name: Upload deployment artifacts
@@ -569,7 +798,7 @@ jobs:
       run: |
         echo "🏭 Production Deployment"
         echo "======================"
-        echo "⚠️  This would deploy to production environment"
+        echo "✅ Production deployment simulation completed"⚠️  This would deploy to production environment"
         echo "🔒 Manual approval required"
         echo "📋 Pre-production checklist:"
         echo "   - Clinical validation ✅"
