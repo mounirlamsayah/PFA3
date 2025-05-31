@@ -1,0 +1,104 @@
+name: ML Pipeline
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  ci_pipeline:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Python 3.10.13
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10.13'
+    
+    - name: install requirements
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+  
+    - name: run data loader
+      run: |
+        python data_loader.py
+        
+    - name: data preprocessing
+      run: |
+        python preprocessing.py
+        
+
+    - name: feature extraction
+      run: |
+        python feature_extraction.py
+        
+
+    - name: train model
+      run: python train_model.py
+
+    - name: evaluate model
+        
+      run: python evaluate_model.py
+
+
+    - name: Set up Ngrok and Run MLflow UI
+      env:
+        NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
+      run: |
+        pip install pyngrok requests
+        python -c "
+        import os
+        import time
+        import subprocess
+        from pyngrok import ngrok
+
+        ngrok.set_auth_token(os.environ['NGROK_AUTH_TOKEN'])
+
+        mlflow_process = subprocess.Popen([
+            'mlflow', 'ui',
+            '--backend-store-uri', './mlruns',
+            '--default-artifact-root', './mlruns',
+            '--host', '0.0.0.0',
+            '--port', '5000'
+        ])
+        time.sleep(10)
+        print('premier sleep terminé')
+        public_url = ngrok.connect(5000)
+        print('\\n' + '='*50)
+        print('🚀 MLflow UI is available at:', public_url)
+        print('='*50 + '\\n')
+        time.sleep(1000)
+        "
+
+    - name: Archive artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: model-artifacts
+        path: |
+          */.txt
+          */.png
+          */.csv
+          */.keras
+
+    - name: Upload MLflow logs
+      uses: actions/upload-artifact@v4
+      with:
+        name: mlruns
+        path: mlruns/
+
+    - name: Upload Data directory
+      uses: actions/upload-artifact@v4
+      with:
+        name: data
+        path: data/
+
+    - name: Upload Outputs directory
+      uses: actions/upload-artifact@v4
+      with:
+        name: outputs
+        path: outputs/
