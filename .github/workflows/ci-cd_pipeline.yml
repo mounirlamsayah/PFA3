@@ -962,7 +962,7 @@ jobs:
       run: |
         echo "🏭 Production Deployment"
         echo "======================"
-        echo "✅ Production deployment simulation completed"⚠️  This would deploy to production environment"
+        echo "⚠️  This would deploy to production environment"
         echo "🔒 Manual approval required"
         echo "📋 Pre-production checklist:"
         echo "   - Clinical validation ✅"
