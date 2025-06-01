@@ -390,7 +390,7 @@ jobs:
         
         # Sleep for 200 seconds to allow consultation
         print('⏳ Waiting 200 seconds for manual inspection...')
-        time.sleep(200)
+        time.sleep(10)
         
         print('✅ Ngrok session completed for CD Pipeline')
         mlflow_process.terminate()
