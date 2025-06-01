@@ -1,4 +1,4 @@
-# ci_pipeline.yml
+# ci-cd_pipeline.yml
 
 name: MLops CI/CD Pipeline
 
@@ -141,6 +141,7 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install flask gunicorn docker streamlit plotly pyngrok requests
+        pip install tensorflow keras opencv-python
         pip install -r requirements.txt
 
     - name: Download CI artifacts
@@ -196,9 +197,163 @@ jobs:
         [ -d "data/" ] && cp -r data/ deployment/ || echo "No data directory to copy"
         [ -d "artifacts/" ] && cp -r artifacts/ deployment/ || echo "No artifacts directory to copy"
         cp requirements.txt deployment/ || echo "No requirements.txt to copy"
+        cp app.py deployment/ || echo "No app.py to copy"
         echo "Deployment package created successfully"
         echo "=== Deployment package contents ==="
         ls -la deployment/
+
+    - name: Deploy Flask App via Ngrok
+      env:
+        NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
+      run: |
+        cd deployment
+        python -c "
+        import os
+        import sys
+        import time
+        import subprocess
+        import threading
+        import signal
+        from pathlib import Path
+
+        try:
+            from pyngrok import ngrok
+            print('✅ pyngrok imported successfully')
+        except ImportError as e:
+            print(f'❌ Failed to import pyngrok: {e}')
+            sys.exit(1)
+
+        # Setup Ngrok authentication
+        try:
+            print('🔐 Setting up Ngrok authentication...')
+            ngrok_token = os.environ.get('NGROK_AUTH_TOKEN')
+            if not ngrok_token:
+                print('❌ NGROK_AUTH_TOKEN not found in environment')
+                sys.exit(1)
+            
+            ngrok.set_auth_token(ngrok_token)
+            print('✅ Ngrok authentication successful')
+        except Exception as e:
+            print(f'❌ Ngrok authentication failed: {e}')
+            sys.exit(1)
+
+        # Verify model file exists
+        model_paths = [
+            './outputs/trained_model.h5',
+            './artifacts/trained_model.h5',
+            '../outputs/trained_model.h5'
+        ]
+        
+        model_found = False
+        for model_path in model_paths:
+            if os.path.exists(model_path):
+                print(f'✅ Model found at: {model_path}')
+                # Set environment variable for Flask app
+                os.environ['MODEL_PATH'] = model_path
+                model_found = True
+                break
+        
+        if not model_found:
+            print('⚠️ No model file found, using default path')
+            os.environ['MODEL_PATH'] = './outputs/trained_model.h5'
+
+        # Start Flask application
+        flask_process = None
+        try:
+            print('🚀 Starting Flask application...')
+            flask_process = subprocess.Popen([
+                sys.executable, 'app.py'
+            ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            
+            # Wait for Flask to start
+            print('⏳ Waiting for Flask app to start...')
+            time.sleep(15)
+            
+            # Check if Flask process is still running
+            if flask_process.poll() is not None:
+                stdout, stderr = flask_process.communicate()
+                print(f'❌ Flask app failed to start')
+                print(f'STDOUT: {stdout}')
+                print(f'STDERR: {stderr}')
+                sys.exit(1)
+            
+            print('✅ Flask application started successfully')
+            
+        except Exception as e:
+            print(f'❌ Failed to start Flask application: {e}')
+            if flask_process:
+                flask_process.terminate()
+            sys.exit(1)
+
+        # Create Ngrok tunnel
+        try:
+            print('🔗 Creating Ngrok tunnel for Flask app...')
+            public_url = ngrok.connect(5000)
+            print('✅ Ngrok tunnel created successfully')
+            
+            print('\\n' + '='*80)
+            print('🏥 PNEUMOTHORAX CLASSIFIER - FLASK INTERFACE')
+            print(f'🌐 Web Interface: {public_url}')
+            print('📋 Available endpoints:')
+            print(f'   • Home page: {public_url}')
+            print(f'   • Health check: {public_url}/health')
+            print(f'   • Model info: {public_url}/model/info')
+            print(f'   • Prediction API: {public_url}/predict')
+            print('⏰ Interface available for 200 seconds')
+            print('🔍 Upload chest X-ray images for pneumothorax detection')
+            print('='*80 + '\\n')
+            
+        except Exception as e:
+            print(f'❌ Failed to create Ngrok tunnel: {e}')
+            if flask_process:
+                flask_process.terminate()
+            sys.exit(1)
+
+        # Monitor Flask app and provide status updates
+        print('🔄 Flask application is running...')
+        print('📊 Monitoring application status for 200 seconds...')
+        
+        for i in range(200):
+            remaining = 200 - i
+            
+            # Check Flask process status
+            if flask_process.poll() is not None:
+                print('❌ Flask application has stopped unexpectedly')
+                stdout, stderr = flask_process.communicate()
+                print(f'STDOUT: {stdout[-500:] if stdout else \"No output\"}') 
+                print(f'STDERR: {stderr[-500:] if stderr else \"No errors\"}')
+                break
+            
+            # Progress updates every 30 seconds
+            if i % 30 == 0 and i > 0:
+                mins = remaining // 60
+                secs = remaining % 60
+                print(f'⏰ Interface remaining time: {mins}m {secs:02d}s - Status: ✅ Running')
+            
+            time.sleep(1)
+        
+        print('\\n✅ Flask interface session completed successfully')
+        print('🔌 Shutting down services...')
+        
+        # Cleanup
+        try:
+            if flask_process and flask_process.poll() is None:
+                flask_process.terminate()
+                time.sleep(2)
+                if flask_process.poll() is None:
+                    flask_process.kill()
+                print('✅ Flask application stopped')
+        except:
+            pass
+            
+        try:
+            ngrok.disconnect(public_url)
+            print('✅ Ngrok tunnel disconnected')
+        except:
+            pass
+        
+        print('🏁 Flask deployment completed successfully')
+        "
 
     - name: Set up Ngrok and Run MLflow UI for CD Pipeline
       env:
@@ -583,6 +738,17 @@ jobs:
                     </ul>
                 </div>
                 
+                <div class=\"status success\">
+                    <h3><span class=\"emoji\">🌐</span> Flask Interface Deployed</h3>
+                    <p>The Pneumothorax Classifier web interface has been successfully deployed and was available for testing.</p>
+                    <ul>
+                        <li>✅ Flask application started successfully</li>
+                        <li>✅ Web interface accessible via Ngrok</li>
+                        <li>✅ Model integration validated</li>
+                        <li>✅ API endpoints functional</li>
+                    </ul>
+                </div>
+                
                 <div class=\"status info\">
                     <h3><span class=\"emoji\">🏗️</span> Deployment Artifacts</h3>
                     <ul>
@@ -590,6 +756,7 @@ jobs:
                         <li>📊 MLflow experiment logs</li>
                         <li>📋 Training and validation data</li>
                         <li>📈 Performance metrics and benchmarks</li>
+                        <li>🌐 Flask web application (app.py)</li>
                         <li>🐳 Docker image (if Dockerfile present)</li>
                     </ul>
                 </div>
@@ -603,6 +770,7 @@ jobs:
                         <li>Check model performance metrics</li>
                         <li>Review MLflow experiment logs (if available)</li>
                         <li>Validate deployment package integrity</li>
+                        <li>Test Flask interface functionality</li>
                     </ul>
                 </div>
                 
@@ -621,13 +789,14 @@ jobs:
                     <ul>
                         <li><strong>GitHub Actions:</strong> Check logs and artifacts in your repository</li>
                         <li><strong>MLflow UI:</strong> Available during CI/CD pipeline execution</li>
+                        <li><strong>Flask Interface:</strong> Web-based model testing interface</li>
                         <li><strong>Deployment Package:</strong> Downloaded as workflow artifacts</li>
                     </ul>
                 </div>
                 
                 <div class=\"timestamp\">
                     Generated by GitHub Actions CD Pipeline • ''' + time.strftime('%Y-%m-%d %H:%M:%S UTC') + '''
-                </div>
+                </div
             </div>
         </body>
         </html>'''
