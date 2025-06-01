@@ -74,7 +74,7 @@ jobs:
         print('\\n' + '='*50)
         print('🚀 MLflow UI is available at:', public_url)
         print('='*50 + '\\n')
-        time.sleep(10)
+        time.sleep(200)
         "
 
     - name: Archive model artifacts
